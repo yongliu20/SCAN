@@ -1,0 +1,124 @@
+MODEL:
+  META_ARCHITECTURE: "SCAN"
+  BACKBONE:
+    FREEZE_AT: 0
+    NAME: "D2SwinTransformer"
+  SWIN:
+    EMBED_DIM: 128
+    DEPTHS: [2, 2, 18, 2]
+    NUM_HEADS: [4, 8, 16, 32]
+    WINDOW_SIZE: 12
+    APE: False
+    DROP_PATH_RATE: 0.3
+    PATCH_NORM: True
+    PRETRAIN_IMG_SIZE: 384
+  WEIGHTS: "swin_base_patch4_window12_384_22k.pkl"
+  PIXEL_MEAN: [123.675, 116.280, 103.530]
+  PIXEL_STD: [58.395, 57.120, 57.375]
+  SELECT_ORI_CLIP_ID: [12, 18, 24]
+  FREQUENCY_SIGMA: [9, 7, 3]
+  SEM_SEG_HEAD:
+    NAME: "OpenVocaMask2FormerHead"
+    IN_FEATURES: ["res2", "res3", "res4", "res5"]
+    IGNORE_VALUE: 255
+    NUM_CLASSES: 171 # number of categories in training set
+    EMBEDDING_DIM: 768
+    EMBED_LAYERS: 2
+    COMMON_STRIDE: 4 # not used, hard-coded
+    LOSS_WEIGHT: 1.0
+    CONVS_DIM: 256
+    MASK_DIM: 256
+    NORM: "GN"
+    # pixel decoder
+    PIXEL_DECODER_NAME: "MSDeformAttnPixelDecoder"
+    IN_FEATURES: ["res2", "res3", "res4", "res5"]
+    DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES: ["res3", "res4", "res5"]
+    COMMON_STRIDE: 4
+    TRANSFORMER_ENC_LAYERS: 6
+  MASK_FORMER:
+    TRANSFORMER_DECODER_NAME: "MultiScaleMaskedTransformerDecoder"
+    TRANSFORMER_IN_FEATURE: "multi_scale_pixel_decoder"
+    DEEP_SUPERVISION: True
+    NO_OBJECT_WEIGHT: 0.1
+    CLASS_WEIGHT: 2.0
+    MASK_WEIGHT: 5.0
+    DICE_WEIGHT: 5.0
+    HIDDEN_DIM: 256
+    NUM_OBJECT_QUERIES: 100
+    NHEADS: 8
+    DROPOUT: 0.0
+    DIM_FEEDFORWARD: 2048
+    ENC_LAYERS: 0
+    PRE_NORM: False
+    ENFORCE_INPUT_PROJ: False
+    SIZE_DIVISIBILITY: 32
+    DEC_LAYERS: 10  # 9 decoder layers, add one for the loss on learnable query
+    TRAIN_NUM_POINTS: 12544
+    OVERSAMPLE_RATIO: 3.0
+    IMPORTANCE_SAMPLE_RATIO: 0.75
+  CLIP_ADAPTER:
+    TEXT_TEMPLATES: "vild"
+    CLIP_MODEL_NAME: "ViT-L/14"
+    MASK_FILL: "mean"
+    MASK_EXPAND_RATIO: 1.0
+    MASK_MATTING: False # use soft background, default not used
+    REGION_RESIZED: True # resize to the input of clip, e.g., 224
+    CLIP_ENSEMBLE: True # use ensemble of two classification branches
+    # For the [MASK_THR, CLIP_ENSEMBLE_WEIGHT], we have the following settings:
+    # a847: [0.3, 0.75]  a150: [0.55, 0.75]  pc459: [0.25, 0.65]  pc59: [0.5, 0.5]  voc20: [0.2, 0.65]
+    MASK_THR: 0.4
+    CLIP_ENSEMBLE_WEIGHT: 0.7
+    # For the REPLACE_RATIO, we have the following settings:
+    # a847: 0.15  a150: 0.05  pc459: 0.05  pc59: 0.05  voc20: 0.1
+    REPLACE_RATIO: 0.15
+    REPLACE_LAYER: [1, 3, 5, 7, 9]
+DATASETS:
+  TRAIN: ("coco_2017_train_stuff_sem_seg",)
+  TEST: ("ade20k_sem_seg_val",)
+SOLVER:
+  IMS_PER_BATCH: 32
+  BASE_LR: 0.00006
+  MAX_ITER: 120000
+  WARMUP_FACTOR: 1e-6
+  WARMUP_ITERS: 1500
+  LR_SCHEDULER_NAME: "WarmupPolyLR"
+  WEIGHT_DECAY: 0.01
+  WEIGHT_DECAY_NORM: 0.0
+  WEIGHT_DECAY_EMBED: 0.0
+  BACKBONE_MULTIPLIER: 1.0
+  TEST_IMS_PER_BATCH: 1
+  CLIP_GRADIENTS:
+    ENABLED: True
+    CLIP_TYPE: "full_model"
+    CLIP_VALUE: 0.01
+    NORM_TYPE: 2.0
+INPUT:
+  MIN_SIZE_TRAIN: !!python/object/apply:eval ["[int(x * 0.1 * 640) for x in range(5, 21)]"]
+  MIN_SIZE_TRAIN_SAMPLING: "choice"
+  MIN_SIZE_TEST: 640
+  MAX_SIZE_TRAIN: 2560
+  MAX_SIZE_TEST: 2560
+  CROP:
+    ENABLED: True
+    TYPE: "absolute"
+    SIZE: (640, 640)
+    SINGLE_CATEGORY_MAX_AREA: 1.0
+  COLOR_AUG_SSD: True
+  SIZE_DIVISIBILITY: 640  # used in dataset mapper
+  FORMAT: "RGB"
+TEST:
+  EVAL_PERIOD: 5000
+  # SEMANTIC_ON: True
+  # INSTANCE_ON: False
+  # PANOPTIC_ON: False
+  AUG:
+    ENABLED: False
+    MIN_SIZES: [256, 384, 512, 640, 768, 896]
+    MAX_SIZE: 3584
+    FLIP: True
+DATALOADER:
+  FILTER_EMPTY_ANNOTATIONS: True
+  NUM_WORKERS: 16
+VERSION: 2
+METRIC: 'Vanilla' # Vanilla or SG-IoU
+OUTPUT_DIR: output/SCAN-VitL

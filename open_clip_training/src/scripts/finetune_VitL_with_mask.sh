@@ -1,0 +1,18 @@
+torchrun --master_port 12345 --nproc_per_node 8 -m training.main \
+    --train-data /opt/tiger/ljyaronld/method7/OVSeg/open_clip_training/openclip_data/coco_proposal_1cap.csv \
+    --train-num-samples 442117 \
+    --lr 0.000005 \
+    --warmup 100 \
+    --force-quick-gelu \
+    --dataset-type csv \
+    --batch-size 32 \
+    --precision amp \
+    --workers 8 \
+    --model  ViT-L-14 \
+    --lock-text \
+    --zeroshot-frequency 1 \
+    --save-frequency 1 \
+    --epochs 10 \
+    --pretrained datacomp_xl_s13b_b90k \
+    --ade-val /opt/tiger/ljyaronld/method7/OVSeg/open_clip_training/openclip_data/ade_gt_150cls_val \
+    --with-mask
