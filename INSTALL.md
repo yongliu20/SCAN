@@ -24,6 +24,6 @@ python -m pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wh
 Install other packages.
 
 ```bash
-cd mask2former/modeling/pixel_decoder/ops
+cd scan/modeling/pixel_decoder/ops
 sh make.sh
 ```

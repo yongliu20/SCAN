@@ -5,7 +5,7 @@ instant_test_output
 inference_test_output
 
 
-*.json
+
 *.diff
 *.jpg
 !/projects/DensePose/doc/images/*.jpg
