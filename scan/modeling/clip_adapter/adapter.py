@@ -21,8 +21,8 @@ PIXEL_STD = (0.26862954, 0.26130258, 0.27577711)
 class ClipAdapter(nn.Module):
     def __init__(self, clip_model_name: str, text_templates: PromptExtractor):
         super().__init__()
-        self.clip_model, _, preprocess, _ = create_model_and_transforms(model_name='ViT-L-14', pretrained='datacomp_xl_s13b_b90k')
-        self.tokenizer = get_tokenizer('ViT-L-14')
+        self.clip_model, _, preprocess, _ = create_model_and_transforms(model_name=clip_model_name, pretrained='datacomp_xl_s13b_b90k')
+        self.tokenizer = get_tokenizer(clip_model_name)
         self.original_clip = copy.deepcopy(self.clip_model.visual)
 
         for name, param in self.clip_model.named_parameters():

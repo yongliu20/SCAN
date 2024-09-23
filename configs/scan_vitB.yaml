@@ -17,6 +17,9 @@ MODEL:
   PIXEL_STD: [58.395, 57.120, 57.375]
   SELECT_ORI_CLIP_ID: [6, 9, 12]
   FREQUENCY_SIGMA: [9, 7, 3]
+  CLIP_VISION_DIM: 768
+  SCAN_DIM: 512
+  PATCH_SIZE: 14
   SEM_SEG_HEAD:
     NAME: "OpenVocaMask2FormerHead"
     IN_FEATURES: ["res2", "res3", "res4", "res5"]
@@ -58,7 +61,7 @@ MODEL:
     IMPORTANCE_SAMPLE_RATIO: 0.75
   CLIP_ADAPTER:
     TEXT_TEMPLATES: "vild"
-    CLIP_MODEL_NAME: "ViT-B/16"
+    CLIP_MODEL_NAME: "ViT-B-16"
     MASK_FILL: "mean"
     MASK_EXPAND_RATIO: 1.0
     MASK_MATTING: False # use soft background, default not used

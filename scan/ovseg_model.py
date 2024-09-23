@@ -62,6 +62,8 @@ class SCAN(Mask2Former):
         test_topk_per_image: int,
         select_ori_clip_id: list,
         frequency_sigma: list,
+        scan_dim: int,
+        patch_size: int
     ):
         """
         Args:
@@ -116,6 +118,9 @@ class SCAN(Mask2Former):
         self.select_ori_clip_id = select_ori_clip_id
         self.frequency_sigma = frequency_sigma
 
+        self.scan_dim = scan_dim
+        self.patch_size = patch_size
+
         self.openai_pixel_mean = torch.Tensor((0.48145466, 0.4578275, 0.40821073)).reshape(3, 1, 1) * 255
         self.openai_pixel_std = torch.Tensor((0.26862954, 0.26130258, 0.27577711)).reshape(3, 1, 1) * 255
 
@@ -141,17 +146,18 @@ class SCAN(Mask2Former):
             "clip_ensemble_weight"
         ] = cfg.MODEL.CLIP_ADAPTER.CLIP_ENSEMBLE_WEIGHT
 
-        encoder_layer = nn.TransformerEncoderLayer(d_model=768, nhead=8, batch_first=True)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=cfg.MODEL.SCAN_DIM, nhead=8, batch_first=True)
         transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=5)
         init_kwargs['lightweight_transformer'] = transformer_encoder
-        init_kwargs['LFM'] = LFM(num_channels=1024)
+        init_kwargs['LFM'] = LFM(num_channels=cfg.MODEL.CLIP_VISION_DIM)
         
-        init_kwargs['fusion_decoder'] = CA(input_dim=768, num=5)
-        init_kwargs['oriclip_mlp'] = MLP(1024, 768)
+        init_kwargs['fusion_decoder'] = CA(input_dim=cfg.MODEL.SCAN_DIM, num=5)
+        init_kwargs['oriclip_mlp'] = MLP(cfg.MODEL.CLIP_VISION_DIM, cfg.MODEL.SCAN_DIM)
 
         init_kwargs['select_ori_clip_id'] = cfg.MODEL.SELECT_ORI_CLIP_ID
         init_kwargs['frequency_sigma'] = cfg.MODEL.FREQUENCY_SIGMA
-
+        init_kwargs['scan_dim'] = cfg.MODEL.SCAN_DIM
+        init_kwargs['patch_size'] = cfg.MODEL.PATCH_SIZE
         return init_kwargs
 
     def forward(self, batched_inputs):
@@ -200,7 +206,7 @@ class SCAN(Mask2Former):
         ori_clip_hw_feature = []
         for sigma_i, o_id in enumerate(select_ori_clip_id):
             _, b, c = clip_features_all[o_id].shape
-            ori_clip_frequency = clip_features_all[o_id].permute(1, 2, 0).reshape(b, c, 16, 16)
+            ori_clip_frequency = clip_features_all[o_id].permute(1, 2, 0).reshape(b, c, self.patch_size, self.patch_size)
             ori_clip_frequency = self.LFM(ori_clip_frequency, sigma=frequency_sigma[sigma_i])
             ori_clip_hw_feature.append(ori_clip_frequency.flatten(-2).permute(2,0,1))
         ori_clip_hw_feature = torch.concat(ori_clip_hw_feature, dim=0).transpose(0, 1)
@@ -225,7 +231,7 @@ class SCAN(Mask2Former):
 
 
         outputs["pred_logits"] = self.lightweight_transformer(outputs["pred_logits"] + self.learnable_weight * clip_features)
-        outputs["pred_logits"] = outputs["pred_logits"].reshape(-1, 100, 768)
+        outputs["pred_logits"] = outputs["pred_logits"].reshape(-1, 100, self.scan_dim)
         
 
         class_names = self.get_class_name_list(dataset_name)
@@ -245,7 +251,7 @@ class SCAN(Mask2Former):
 
                     outputs["aux_outputs"][i]["pred_logits"] = self.lightweight_transformer(outputs["aux_outputs"][i]["pred_logits"]  + self.learnable_weight * clip_features)
 
-                    outputs["aux_outputs"][i]["pred_logits"] = outputs["aux_outputs"][i]["pred_logits"].reshape(-1, 100, 768)
+                    outputs["aux_outputs"][i]["pred_logits"] = outputs["aux_outputs"][i]["pred_logits"].reshape(-1, 100, self.scan_dim)
 
                     outputs["aux_outputs"][i]["pred_logits"] = self.clip_adapter.get_sim_logits(
                         text_features,
@@ -387,6 +393,8 @@ class SCANDEMO(Mask2Former):
         test_topk_per_image: int,
         select_ori_clip_id: list,
         frequency_sigma: list,
+        scan_dim: int,
+        patch_size: int
     ):
         """
         Args:
@@ -441,6 +449,9 @@ class SCANDEMO(Mask2Former):
         self.select_ori_clip_id = select_ori_clip_id
         self.frequency_sigma = frequency_sigma
 
+        self.scan_dim = scan_dim
+        self.patch_size = patch_size
+
         self.openai_pixel_mean = torch.Tensor((0.48145466, 0.4578275, 0.40821073)).reshape(3, 1, 1) * 255
         self.openai_pixel_std = torch.Tensor((0.26862954, 0.26130258, 0.27577711)).reshape(3, 1, 1) * 255
 
@@ -466,17 +477,18 @@ class SCANDEMO(Mask2Former):
             "clip_ensemble_weight"
         ] = cfg.MODEL.CLIP_ADAPTER.CLIP_ENSEMBLE_WEIGHT
 
-        encoder_layer = nn.TransformerEncoderLayer(d_model=768, nhead=8, batch_first=True)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=cfg.MODEL.SCAN_DIM, nhead=8, batch_first=True)
         transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=5)
         init_kwargs['lightweight_transformer'] = transformer_encoder
-        init_kwargs['LFM'] = LFM(num_channels=1024)
+        init_kwargs['LFM'] = LFM(num_channels=cfg.MODEL.CLIP_VISION_DIM)
         
-        init_kwargs['fusion_decoder'] = CA(input_dim=768, num=5)
-        init_kwargs['oriclip_mlp'] = MLP(1024, 768)
+        init_kwargs['fusion_decoder'] = CA(input_dim=cfg.MODEL.SCAN_DIM, num=5)
+        init_kwargs['oriclip_mlp'] = MLP(cfg.MODEL.CLIP_VISION_DIM, cfg.MODEL.SCAN_DIM)
 
         init_kwargs['select_ori_clip_id'] = cfg.MODEL.SELECT_ORI_CLIP_ID
         init_kwargs['frequency_sigma'] = cfg.MODEL.FREQUENCY_SIGMA
-
+        init_kwargs['scan_dim'] = cfg.MODEL.SCAN_DIM
+        init_kwargs['patch_size'] = cfg.MODEL.PATCH_SIZE
         return init_kwargs
 
     def forward(self, batched_inputs):
@@ -521,7 +533,7 @@ class SCANDEMO(Mask2Former):
         ori_clip_hw_feature = []
         for sigma_i, o_id in enumerate(select_ori_clip_id):
             _, b, c = clip_features_all[o_id].shape
-            ori_clip_frequency = clip_features_all[o_id].permute(1,2,0).reshape(b, c, 16, 16)
+            ori_clip_frequency = clip_features_all[o_id].permute(1,2,0).reshape(b, c, self.patch_size, self.patch_size)
             ori_clip_frequency = self.LFM(ori_clip_frequency, sigma=frequency_sigma[sigma_i])
             ori_clip_hw_feature.append(ori_clip_frequency.flatten(-2).permute(2,0,1))
         ori_clip_hw_feature = torch.concat(ori_clip_hw_feature, dim=0).transpose(0, 1)
@@ -544,7 +556,7 @@ class SCANDEMO(Mask2Former):
         clip_features = clip_features.unsqueeze(1)
 
         outputs["pred_logits"] = self.lightweight_transformer(outputs["pred_logits"] + self.learnable_weight * clip_features)
-        outputs["pred_logits"] = outputs["pred_logits"].reshape(-1, 100, 768)
+        outputs["pred_logits"] = outputs["pred_logits"].reshape(-1, 100, self.scan_dim)
 
         class_names = batched_inputs[0]["class_names"]
         if len(class_names) == 1:

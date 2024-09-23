@@ -152,6 +152,9 @@ def add_our_config(cfg):
 
     cfg.MODEL.SELECT_ORI_CLIP_ID = [12, 18, 24]
     cfg.MODEL.FREQUENCY_SIGMA = [9, 7, 3]
+    cfg.MODEL.CLIP_VISION_DIM = 1024
+    cfg.MODEL.SCAN_DIM = 768
+    cfg.MODEL.PATCH_SIZE = 16
 
     # for metric
     cfg.METRIC = 'Vanilla'
